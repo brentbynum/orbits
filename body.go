@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 	"time"
 
@@ -108,22 +109,26 @@ type Body struct {
 	density  float64
 	energy   float64
 	active   bool
+
+	forceVectors []*Vec
 }
 
 func NewBody(name string, x, y, mass, density, energy float64) *Body {
 	return &Body{
-		name:     name,
-		pos:      NewVec(x, y),
-		velocity: NewVec(0, 0),
-		mass:     mass,
-		density:  density,
-		energy:   energy,
-		active:   true,
+		name:         name,
+		pos:          NewVec(x, y),
+		velocity:     NewVec(0, 0),
+		mass:         mass,
+		density:      density,
+		energy:       energy,
+		active:       true,
+		forceVectors: make([]*Vec, 0),
 	}
 }
 
 func (b *Body) MergeBodies(bodies []*Body) {
 	for _, body := range bodies {
+
 		b.name = fmt.Sprint(body.name, ", ", b.name)
 
 		b.density = (b.density*b.mass + body.density*body.mass) / (b.mass + body.mass)
@@ -146,6 +151,9 @@ func (b *Body) Draw(screen *ebiten.Image) {
 	screen.DrawImage(bodyImage, op)
 
 	ebitenutil.DebugPrintAt(screen, b.name, int(b.pos.x), int(b.pos.y)+20)
+	for _, v := range b.forceVectors {
+		ebitenutil.DrawLine(screen, b.pos.x, b.pos.y, b.pos.x+v.x, b.pos.y+v.y, color.RGBA{255, 0, 0, 255})
+	}
 	// s := fmt.Sprintf("Velocity: %5.2f", b.velocity.GetLength())
 	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+40)
 
@@ -172,5 +180,6 @@ func (b *Body) CalcTotalAccelleration(bodies []*Body) *Vec {
 			vectors = append(vectors, dir)
 		}
 	}
+	b.forceVectors = vectors
 	return SumVecs(vectors)
 }

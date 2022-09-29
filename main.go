@@ -44,13 +44,6 @@ func (g *Game) ProcessBody(delta time.Duration, b *Body) {
 
 func (g *Game) Update() error {
 
-	filterInactive := make([]*Body, 0)
-	for _, b := range g.bodies {
-		if b.active {
-			filterInactive = append(filterInactive, b)
-		}
-	}
-	g.bodies = filterInactive
 	delta := time.Since(lastUpdate)
 	lastUpdate = time.Now()
 	for _, b := range g.bodies {
@@ -59,6 +52,15 @@ func (g *Game) Update() error {
 		}
 	}
 
+	filterInactive := make([]*Body, 0)
+	for _, b := range g.bodies {
+		if b.active {
+			filterInactive = append(filterInactive, b)
+		} else {
+			fmt.Println("Removed ", b.name)
+		}
+	}
+	g.bodies = filterInactive
 	return nil
 }
 
@@ -80,7 +82,7 @@ func NewGame() *Game {
 		NewBody("core", cx, cy, 1000, 500, 100), // crank up the density in the core or it gets hard to see
 
 	}
-	for i := 1; i < 20; i++ {
+	for i := 1; i < 30; i++ {
 		x := cx + (rand.Float64() * 600) - 300
 		y := cy + (rand.Float64() * 400) - 200
 		m := (rand.Float64() * 30)
