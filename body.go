@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	G            float64 = 0.25
+	G            float64 = 0.0125
 	max_mass     float64 = 100.0
 	max_density  float64 = 10.0
 	max_velocity float64 = 10.0
@@ -129,6 +129,7 @@ func (b *Body) MergeBodies(bodies []*Body) {
 		b.density = (b.density*b.mass + body.density*body.mass) / (b.mass + body.mass)
 		b.velocity.x = (b.velocity.x*b.mass + body.velocity.x*body.mass) / (b.mass + body.mass)
 		b.velocity.y = (b.velocity.y*b.mass + body.velocity.y*body.mass) / (b.mass + body.mass)
+		b.pos = body.pos
 		b.mass += body.mass
 		b.energy += body.energy
 
@@ -140,18 +141,18 @@ func (b *Body) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	sizeFactor := b.mass / b.density
 	op.GeoM.Scale(sizeFactor, sizeFactor)
-	op.ColorM.Scale(b.energy/max_energy, 1.0, b.velocity.GetLength()/max_velocity, b.density/max_density)
-	op.GeoM.Translate(b.pos.x, b.pos.y)
+	op.ColorM.Scale(b.energy/max_energy, b.velocity.GetLength()/max_velocity, b.velocity.GetLength()/max_velocity, b.density/max_density)
+	op.GeoM.Translate(b.pos.x-sizeFactor/2, b.pos.y-sizeFactor/2)
 	screen.DrawImage(bodyImage, op)
 
 	ebitenutil.DebugPrintAt(screen, b.name, int(b.pos.x), int(b.pos.y)+20)
-	s := fmt.Sprintf("Velocity: %5.2f, %5.2f", b.velocity.x, b.velocity.y)
-	ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+40)
+	// s := fmt.Sprintf("Velocity: %5.2f", b.velocity.GetLength())
+	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+40)
 
-	s = fmt.Sprintf("Mass: %5.3f", b.mass)
-	ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+60)
-	s = fmt.Sprintf("Density: %5.3f", b.density)
-	ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+80)
+	// s = fmt.Sprintf("Mass: %5.3f", b.mass)
+	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+60)
+	// s = fmt.Sprintf("Density: %5.3f", b.density)
+	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+80)
 }
 
 func (b *Body) Update(delta time.Duration, accel *Vec) {
@@ -167,7 +168,7 @@ func (b *Body) CalcTotalAccelleration(bodies []*Body) *Vec {
 		if b != body {
 			d2 := DistanceSquared(b.pos, body.pos)
 			f := G * ((b.mass * body.mass) / d2)
-			dir := DiffAndScale(b.pos, body.pos, f*body.mass)
+			dir := DiffAndScale(b.pos, body.pos, (f*body.mass)/b.mass)
 			vectors = append(vectors, dir)
 		}
 	}
