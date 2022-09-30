@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 	"time"
 
@@ -101,13 +102,14 @@ func SumVecs(vecs []*Vec) *Vec {
 }
 
 type Body struct {
-	name     string
-	pos      *Vec
-	velocity *Vec
-	mass     float64
-	density  float64
-	energy   float64
-	active   bool
+	name         string
+	pos          *Vec
+	velocity     *Vec
+	mass         float64
+	density      float64
+	energy       float64
+	active       bool
+	forceVectors []*Vec
 }
 
 func NewBody(name string, x, y, mass, density, energy float64) *Body {
@@ -139,13 +141,25 @@ func (b *Body) MergeBodies(bodies []*Body) {
 
 func (b *Body) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
-	sizeFactor := b.mass / b.density
-	op.GeoM.Scale(sizeFactor, sizeFactor)
+	size := b.mass / b.density
+	op.GeoM.Scale(size, size)
 	op.ColorM.Scale(b.energy/max_energy, b.velocity.GetLength()/max_velocity, b.velocity.GetLength()/max_velocity, b.density/max_density)
-	op.GeoM.Translate(b.pos.x-sizeFactor/2, b.pos.y-sizeFactor/2)
+	op.GeoM.Translate(b.pos.x-size/2, b.pos.y-size/2)
 	screen.DrawImage(bodyImage, op)
 
 	ebitenutil.DebugPrintAt(screen, b.name, int(b.pos.x), int(b.pos.y)+20)
+
+	for _, v := range b.forceVectors {
+
+		v.Normalize()
+		v.Scale(b.mass)
+		x1 := b.pos.x
+		y1 := b.pos.y
+		x2 := x1 + v.x
+		y2 := y1 + v.y
+		ebitenutil.DrawLine(screen, x1, y1, x2, y2, color.RGBA{255, 0, 0, 255})
+	}
+
 	// s := fmt.Sprintf("Velocity: %5.2f", b.velocity.GetLength())
 	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+40)
 
@@ -160,17 +174,4 @@ func (b *Body) Update(delta time.Duration, accel *Vec) {
 	b.velocity.y += accel.y * delta.Seconds()
 	b.pos.x += b.velocity.x * delta.Seconds()
 	b.pos.y += b.velocity.y * delta.Seconds()
-}
-
-func (b *Body) CalcTotalAccelleration(bodies []*Body) *Vec {
-	vectors := make([]*Vec, 0)
-	for _, body := range bodies {
-		if b != body {
-			d2 := DistanceSquared(b.pos, body.pos)
-			f := G * ((b.mass * body.mass) / d2)
-			dir := DiffAndScale(b.pos, body.pos, (f*body.mass)/b.mass)
-			vectors = append(vectors, dir)
-		}
-	}
-	return SumVecs(vectors)
 }
