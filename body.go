@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"math"
 	"time"
 
@@ -84,32 +83,37 @@ func DistanceSquared(v1 *Vec, v2 *Vec) float64 {
 	return dx*dx + dy*dy
 }
 
-func DiffAndScale(v1 *Vec, v2 *Vec, scale float64) *Vec {
+func Diff(v1 *Vec, v2 *Vec) *Vec {
 	v := NewVec(v2.x-v1.x, v2.y-v1.y)
-	v.Normalize()
-	v.Scale(scale)
 	return v
 }
 
-func SumVecs(vecs []*Vec) *Vec {
+func SumForces(forces []*Force) *Vec {
 	x := 0.0
 	y := 0.0
-	for _, v := range vecs {
-		x += v.x
-		y += v.y
+	for _, force := range forces {
+		x += force.vector.x * force.strength
+		y += force.vector.y * force.strength
 	}
 	return NewVec(x, y)
 }
 
+type Force struct {
+	targetBody *Body
+	strength   float64
+	vector     *Vec
+}
+
 type Body struct {
-	name         string
-	pos          *Vec
-	velocity     *Vec
-	mass         float64
-	density      float64
-	energy       float64
-	active       bool
-	forceVectors []*Vec
+	name             string
+	pos              *Vec
+	velocity         *Vec
+	mass             float64
+	density          float64
+	energy           float64
+	active           bool
+	spotForces       []*Force
+	maxForceStrength float64
 }
 
 func NewBody(name string, x, y, mass, density, energy float64) *Body {
@@ -149,16 +153,20 @@ func (b *Body) Draw(screen *ebiten.Image) {
 
 	ebitenutil.DebugPrintAt(screen, b.name, int(b.pos.x), int(b.pos.y)+20)
 
-	for _, v := range b.forceVectors {
+	// if b.maxForceStrength > 0 {
+	// 	for _, force := range b.spotForces {
+	// 		x1 := b.pos.x
+	// 		y1 := b.pos.y
+	// 		x2 := x1 + force.vector.x
+	// 		y2 := y1 + force.vector.y
+	// 		alpha := math.Max((force.strength/b.maxForceStrength)*255, 128)
+	// 		ebitenutil.DrawLine(screen, x1, y1, x2, y2, color.RGBA{255, 0, 0, uint8(alpha)})
+	// 		ebitenutil.DrawLine(screen, x1, y1, force.targetBody.pos.x, force.targetBody.pos.y, color.RGBA{0, 255, 0, 64})
+	// 	}
+	// }
 
-		v.Normalize()
-		v.Scale(b.mass)
-		x1 := b.pos.x
-		y1 := b.pos.y
-		x2 := x1 + v.x
-		y2 := y1 + v.y
-		ebitenutil.DrawLine(screen, x1, y1, x2, y2, color.RGBA{255, 0, 0, 255})
-	}
+	// s := fmt.Sprint("forces: ", b.spotForces)
+	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+35)
 
 	// s := fmt.Sprintf("Velocity: %5.2f", b.velocity.GetLength())
 	// ebitenutil.DebugPrintAt(screen, s, int(b.pos.x), int(b.pos.y)+40)
