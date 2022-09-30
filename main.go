@@ -35,8 +35,33 @@ func (g *Game) GetCollisions(body *Body) []*Body {
 	return result
 }
 
+func (g *Game) CalcTotalAccelleration(b *Body) *Vec {
+	forces := make([]*Force, 0)
+	b.maxForceStrength = 0.0
+	for _, body := range g.bodies {
+		if b != body {
+			d2 := DistanceSquared(b.pos, body.pos)
+			f := G * ((b.mass * body.mass) / d2)
+			str := (f * body.mass) / b.mass
+			dir := Diff(b.pos, body.pos)
+			dir.Normalize()
+			dir.Scale(20)
+			forces = append(forces, &Force{
+				strength:   str,
+				vector:     dir,
+				targetBody: body,
+			})
+			if str > b.maxForceStrength {
+				b.maxForceStrength = str
+			}
+		}
+	}
+	b.spotForces = forces
+	return SumForces(forces)
+}
+
 func (g *Game) ProcessBody(delta time.Duration, b *Body) {
-	accel := b.CalcTotalAccelleration(g.bodies)
+	accel := g.CalcTotalAccelleration(b)
 	b.Update(delta, accel)
 	collisions := g.GetCollisions(b)
 	b.MergeBodies(collisions)
