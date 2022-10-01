@@ -90,6 +90,7 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+
 	for _, b := range g.bodies {
 		b.Draw(screen)
 	}
