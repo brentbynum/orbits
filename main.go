@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 
@@ -40,12 +41,11 @@ func (g *Game) CalcTotalAccelleration(b *Body) *Vec {
 	b.maxForceStrength = 0.0
 	for _, body := range g.bodies {
 		if b != body {
-			d2 := DistanceSquared(b.pos, body.pos)
+			d2 := math.Max(DistanceSquared(b.pos, body.pos), 1)
 			f := G * ((b.mass * body.mass) / d2)
 			str := (f * body.mass) / b.mass
 			dir := Diff(b.pos, body.pos)
 			dir.Normalize()
-			dir.Scale(20)
 			forces = append(forces, &Force{
 				strength:   str,
 				vector:     dir,
@@ -105,14 +105,14 @@ func NewGame() *Game {
 	cy := float64(screen_height) / 2
 	g := &Game{}
 	g.bodies = []*Body{
-		NewBody("core", cx, cy, 1000, 500, 100), // crank up the density in the core or it gets hard to see
+		NewBody("core", cx, cy, 100, 50, 100), // crank up the density in the core or it gets hard to see
 
 	}
-	for i := 1; i < 30; i++ {
+	for i := 1; i < 80; i++ {
 		x := cx + (rand.Float64() * 600) - 300
 		y := cy + (rand.Float64() * 400) - 200
 		m := (rand.Float64() * 30)
-		d := m - (rand.Float64() * m)
+		d := m - (rand.Float64() * m / 2)
 		g.bodies = append(g.bodies, NewBody(fmt.Sprint("satellite ", i), x, y, m, d, 1))
 	}
 	for _, b := range g.bodies {

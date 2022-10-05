@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	G            float64 = 0.0125
+	G            float64 = 0.125
 	max_mass     float64 = 100.0
 	max_density  float64 = 10.0
 	max_velocity float64 = 10.0
@@ -30,40 +30,17 @@ var (
 )
 
 func init() {
-	// const (
-	// 	a0 = 0x00
-	// 	a1 = 0x66
-	// 	a2 = 0x99
-	// 	a3 = 0xff
-	// )
-	// pixels := []uint8{
-	// 	a0, a0, a1, a2, a2, a1, a0, a0,
-	// 	a0, a1, a2, a3, a3, a2, a1, a0,
-	// 	a0, a1, a3, a3, a3, a3, a1, a0,
-	// 	a0, a2, a3, a3, a3, a3, a2, a0,
-	// 	a0, a2, a3, a3, a3, a3, a2, a0,
-	// 	a0, a1, a3, a3, a3, a3, a1, a0,
-	// 	a0, a1, a2, a3, a3, a2, a1, a0,
-	// 	a0, a0, a1, a2, a2, a1, a0, a0,
-	// }
 	emptyImage.Fill(color.White)
 	bodyImage = ebiten.NewImage(32, 32)
-	var path vector.Path
-	path.MoveTo(16, 64)
-	path.LineTo(128, 192)
-	path.MoveTo(64, 128)
-	path.LineTo(192, 128)
-	path.Arc(128, 128, 32, 0, 2*math.Pi, vector.Clockwise)
+	var arcPath vector.Path
+	arcPath.Arc(16, 16, 16, 0, 2*math.Pi, vector.Clockwise)
 	op := &ebiten.DrawTrianglesOptions{
 		FillRule: ebiten.EvenOdd,
 	}
-	vs, is := path.AppendVerticesAndIndicesForFilling(nil, nil)
+	vs, is := arcPath.AppendVerticesAndIndicesForFilling(nil, nil)
 	for i := range vs {
 		vs[i].SrcX = 1
 		vs[i].SrcY = 1
-		vs[i].ColorR = 0x33 / float32(0xff)
-		vs[i].ColorG = 0xcc / float32(0xff)
-		vs[i].ColorB = 0x66 / float32(0xff)
 	}
 	bodyImage.DrawTriangles(vs, is, emptySubImage, op)
 }
@@ -94,14 +71,16 @@ func (v *Vec) Scale(factor float64) {
 	v.y *= factor
 }
 func Distance(v1 *Vec, v2 *Vec) float64 {
-	dx := v2.x - v1.x
-	dy := v2.y - v1.y
-	return math.Sqrt(dx*dx + dy*dy)
+	d2 := DistanceSquared(v1, v2)
+	if d2 > 0 {
+		return math.Sqrt(d2)
+	}
+	return 0
 }
 
 func DistanceSquared(v1 *Vec, v2 *Vec) float64 {
-	dx := v1.x - v2.x
-	dy := v1.y - v2.y
+	dx := v2.x - v1.x
+	dy := v2.y - v1.y
 	return dx*dx + dy*dy
 }
 
@@ -153,17 +132,19 @@ func NewBody(name string, x, y, mass, density, energy float64) *Body {
 
 func (b *Body) MergeBodies(bodies []*Body) {
 	for _, body := range bodies {
+		if body.active {
 
-		b.name = fmt.Sprint(body.name, ", ", b.name)
-
-		b.density = (b.density*b.mass + body.density*body.mass) / (b.mass + body.mass)
-		b.velocity.x = (b.velocity.x*b.mass + body.velocity.x*body.mass) / (b.mass + body.mass)
-		b.velocity.y = (b.velocity.y*b.mass + body.velocity.y*body.mass) / (b.mass + body.mass)
-		b.pos = body.pos
-		b.mass += body.mass
-		b.energy += body.energy
-		if b.active {
-			body.active = false
+			fmt.Println("Merging ", body.name, " + ", b.name)
+			b.name = fmt.Sprint(body.name, ", ", b.name)
+			b.density = (b.density*b.mass + body.density*body.mass) / (b.mass + body.mass)
+			b.velocity.x = (b.velocity.x*b.mass + body.velocity.x*body.mass) / (b.mass + body.mass)
+			b.velocity.y = (b.velocity.y*b.mass + body.velocity.y*body.mass) / (b.mass + body.mass)
+			b.pos = body.pos
+			b.mass += body.mass
+			b.energy += body.energy
+			if b.active {
+				body.active = false
+			}
 		}
 	}
 }
@@ -172,12 +153,13 @@ func (b *Body) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	sizeFactor := (b.mass / b.density)
 	op.GeoM.Scale(sizeFactor, sizeFactor)
-	op.ColorM.Scale(b.energy/max_energy, b.velocity.GetLength()/max_velocity, b.velocity.GetLength()/max_velocity, b.density/max_density)
 	op.GeoM.Translate(b.pos.x, b.pos.y)
+	op.GeoM.Translate(0, 0)
 
+	op.ColorM.Scale(b.energy/max_energy, b.velocity.GetLength()/max_velocity, b.velocity.GetLength()/max_velocity, b.density/max_density)
 	screen.DrawImage(bodyImage, op)
 
-	ebitenutil.DebugPrintAt(screen, b.name, int(b.pos.x), int(b.pos.y)+20)
+	ebitenutil.DebugPrintAt(screen, b.name, int(b.pos.x), int(b.pos.y))
 
 	// if b.maxForceStrength > 0 {
 	// 	for _, force := range b.spotForces {
